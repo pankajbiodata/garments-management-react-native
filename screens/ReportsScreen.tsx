@@ -6,10 +6,10 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import EmployeeAttendanceReport from './EmployeeAttendanceReport';
-import InventoryReport from './InventoryReport';
-import SalesReport from './SalesReport';
-import PurchaseReport from './PurchaseReport';
+import EmployeeAttendanceReport from '../reports/EmployeeAttendanceReport';
+import InventoryReport from '../reports/InventoryReport';
+import SalesReport from '../reports/SalesReport';
+import PurchaseReport from '../reports/PurchaseReport';
 const ReportsScreen = ({ navigation }) => {
 
   const openEmployeeAttendanceReport = () => {

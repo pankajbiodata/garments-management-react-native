@@ -9,8 +9,11 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Employee';
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+} from '../services/api';
 
 const EmployeeScreen = ({navigation}) => {
   const [employee, setEmployee] = useState({
@@ -22,6 +25,7 @@ const EmployeeScreen = ({navigation}) => {
   });
 
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Handle input
   const handleInputChange = (key, value) => {
@@ -34,20 +38,35 @@ const EmployeeScreen = ({navigation}) => {
   // GET employees
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/`);
+      setLoading(true);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      console.log('Loading employees...');
+
+      const data = await apiGet('/Employee');
+
+      console.log('Employees API response:', data);
+
+      if (Array.isArray(data)) {
+        setEmployees(data);
+      } else {
+        setEmployees([]);
       }
-
-      const data = await response.json();
-
-      console.log('Employees:', data);
-
-      setEmployees(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Load employees error:', error);
-      Alert.alert('Error', 'Unable to load employees');
+
+      if (error.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Unable to load employees',
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,31 +77,54 @@ const EmployeeScreen = ({navigation}) => {
   // ADD employee
   const handleAddEmployee = async () => {
     try {
-      if (!employee.employeeID || !employee.name) {
+      if (!employee.name.trim()) {
         Alert.alert(
           'Validation',
-          'Employee ID and Name are required',
+          'Employee name is required.',
         );
         return;
       }
 
-      const response = await fetch(`${API_URL}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(employee),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!employee.contact.trim()) {
+        Alert.alert(
+          'Validation',
+          'Employee contact is required.',
+        );
+        return;
       }
 
-      const data = await response.json();
+      const employeeData = {
+        name: employee.name.trim(),
+        contact: employee.contact.trim(),
+        attendance:
+          employee.attendance === ''
+            ? 0
+            : Number(employee.attendance),
+        payments:
+          employee.payments === ''
+            ? 0
+            : Number(employee.payments),
+      };
 
-      console.log('Added employee:', data);
+      console.log(
+        'Adding employee:',
+        employeeData,
+      );
 
-      setEmployees(prev => [...prev, data]);
+      const data = await apiPost(
+        '/Employee',
+        employeeData,
+      );
+
+      console.log(
+        'Added employee:',
+        data,
+      );
+
+      setEmployees(prev => [
+        ...prev,
+        data,
+      ]);
 
       setEmployee({
         employeeID: '',
@@ -92,10 +134,21 @@ const EmployeeScreen = ({navigation}) => {
         payments: '',
       });
 
-      Alert.alert('Success', 'Employee added');
+      Alert.alert(
+        'Success',
+        'Employee added successfully.',
+      );
     } catch (error) {
-      console.error('Add employee error:', error);
-      Alert.alert('Error', 'Unable to add employee');
+      console.error(
+        'Add employee error:',
+        error,
+      );
+
+      Alert.alert(
+        'Error',
+        error.message ||
+          'Unable to add employee.',
+      );
     }
   };
 
@@ -112,30 +165,30 @@ const EmployeeScreen = ({navigation}) => {
         {
           text: 'Delete',
           style: 'destructive',
+
           onPress: async () => {
             try {
-              const response = await fetch(
-                `${API_URL}/${id}`,
-                {
-                  method: 'DELETE',
-                },
+              console.log(
+                'Deleting employee:',
+                id,
               );
 
-              if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-              }
+              await apiDelete(
+                `/Employee/${id}`,
+              );
 
               setEmployees(prev =>
                 prev.filter(
                   emp =>
-                    String(emp.employeeID) !==
-                    String(id),
+                    String(
+                      emp.employeeID,
+                    ) !== String(id),
                 ),
               );
 
               Alert.alert(
                 'Success',
-                'Employee deleted',
+                'Employee deleted successfully.',
               );
             } catch (error) {
               console.error(
@@ -145,7 +198,8 @@ const EmployeeScreen = ({navigation}) => {
 
               Alert.alert(
                 'Error',
-                'Unable to delete employee',
+                error.message ||
+                  'Unable to delete employee.',
               );
             }
           },
@@ -159,19 +213,13 @@ const EmployeeScreen = ({navigation}) => {
     return (
       <View style={styles.employeeRow}>
 
-        {/* NAME */}
-
         <Text style={styles.nameCell}>
           {item.name}
         </Text>
 
-        {/* CONTACT */}
-
         <Text style={styles.contactCell}>
           {item.contact}
         </Text>
-
-        {/* EDIT */}
 
         <View style={styles.buttonCell}>
           <Button
@@ -187,8 +235,6 @@ const EmployeeScreen = ({navigation}) => {
             }
           />
         </View>
-
-        {/* DELETE */}
 
         <View style={styles.buttonCell}>
           <Button
@@ -219,19 +265,7 @@ const EmployeeScreen = ({navigation}) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Employee ID"
-          value={employee.employeeID}
-          onChangeText={value =>
-            handleInputChange(
-              'employeeID',
-              value,
-            )
-          }
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
+          placeholder="Employee Name *"
           value={employee.name}
           onChangeText={value =>
             handleInputChange(
@@ -243,7 +277,7 @@ const EmployeeScreen = ({navigation}) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Contact Number"
+          placeholder="Contact Number *"
           value={employee.contact}
           onChangeText={value =>
             handleInputChange(
@@ -291,8 +325,6 @@ const EmployeeScreen = ({navigation}) => {
 
       <View style={styles.table}>
 
-        {/* HEADER */}
-
         <View style={styles.employeeHeader}>
 
           <Text style={styles.nameHeader}>
@@ -313,22 +345,28 @@ const EmployeeScreen = ({navigation}) => {
 
         </View>
 
-        {/* DATA */}
-
-        <FlatList
-          data={employees}
-          keyExtractor={(item, index) =>
-            String(
-              item.employeeID ?? index,
-            )
-          }
-          renderItem={renderEmployee}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              No employees found
-            </Text>
-          }
-        />
+        {loading ? (
+          <Text style={styles.emptyText}>
+            Loading employees...
+          </Text>
+        ) : (
+          <FlatList
+            data={employees}
+            keyExtractor={(item, index) =>
+              String(
+                item.employeeID ?? index,
+              )
+            }
+            renderItem={renderEmployee}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                No employees found
+              </Text>
+            }
+            refreshing={loading}
+            onRefresh={loadEmployees}
+          />
+        )}
 
       </View>
 
@@ -337,7 +375,6 @@ const EmployeeScreen = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
@@ -428,7 +465,6 @@ const styles = StyleSheet.create({
     padding: 30,
     fontSize: 16,
   },
-
 });
 
 export default EmployeeScreen;

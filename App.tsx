@@ -50,10 +50,10 @@ import EditPurchase from './screens/EditPurchase';
 
 // Reports
 import ReportsScreen from './screens/ReportsScreen';
-import EmployeeAttendanceReport from './screens/EmployeeAttendanceReport';
-import InventoryReport from './screens/InventoryReport';
-import SalesReport from './screens/SalesReport';
-import PurchaseReport from './screens/PurchaseReport';
+import EmployeeAttendanceReport from './reports/EmployeeAttendanceReport';
+import InventoryReport from './reports/InventoryReport';
+import SalesReport from './reports/SalesReport';
+import PurchaseReport from './reports/PurchaseReport';
 import SetupScreen from './screens/SetupScreen';
 // Admin
 import UserManagementScreen from './screens/UserManagementScreen';
@@ -110,12 +110,12 @@ const DashboardScreen = ({navigation}) => {
 
   const {user, logout} = useAuth();
 
- const data = [
+const data = [
   {
     id: '1',
     title: 'Employee Management',
     subtitle: 'Manage employees',
-    icon: 'account-group-outline',
+    icon: 'account-group',
     color: '#2563EB',
     route: 'EmployeeScreen',
   },
@@ -124,34 +124,34 @@ const DashboardScreen = ({navigation}) => {
     id: '2',
     title: 'Inventory Management',
     subtitle: 'Manage stock & items',
-    icon: 'warehouse',
+    icon: 'package-variant',
     color: '#059669',
     route: 'InventoryScreen',
   },
 
   {
-  id: '3',
-  title: 'Sales Management',
-  subtitle: 'Manage sales orders',
-  icon: 'cart-arrow-right',
-  color: '#D97706',
-  route: 'SalesScreen',
-},
+    id: '3',
+    title: 'Sales Management',
+    subtitle: 'Manage sales orders',
+    icon: 'cart',
+    color: '#D97706',
+    route: 'SalesScreen',
+  },
 
-{
-  id: '4',
-  title: 'Purchase Management',
-  subtitle: 'Manage purchases',
-  icon: 'cart-arrow-down',
-  color: '#7C3AED',
-  route: 'PurchaseScreen',
-},
+  {
+    id: '4',
+    title: 'Purchase Management',
+    subtitle: 'Manage purchases',
+    icon: 'cart-arrow-down',
+    color: '#7C3AED',
+    route: 'PurchaseScreen',
+  },
 
   {
     id: '5',
     title: 'Customer Management',
     subtitle: 'Manage customers',
-    icon: 'account-multiple-outline',
+    icon: 'account-multiple',
     color: '#0891B2',
     route: 'CustomerScreen',
   },
@@ -160,7 +160,7 @@ const DashboardScreen = ({navigation}) => {
     id: '6',
     title: 'Vendor Management',
     subtitle: 'Manage vendors',
-    icon: 'truck-outline',
+    icon: 'truck',
     color: '#DB2777',
     route: 'VendorScreen',
   },
@@ -178,7 +178,7 @@ const DashboardScreen = ({navigation}) => {
     id: '8',
     title: 'Settings',
     subtitle: 'Application settings',
-    icon: 'cog-outline',
+    icon: 'cog',
     color: '#64748B',
     route: null,
     disabled: true,
@@ -188,7 +188,7 @@ const DashboardScreen = ({navigation}) => {
     id: '9',
     title: 'User Management',
     subtitle: 'Manage users & roles',
-    icon: 'account-cog-outline',
+    icon: 'account-cog',
     color: '#7C3AED',
     route: 'UserManagement',
   },
@@ -310,6 +310,7 @@ const DashboardScreen = ({navigation}) => {
   // ==========================================================
 
   return (
+
     <SafeAreaView
       style={styles.safeArea}>
 
@@ -347,7 +348,7 @@ const DashboardScreen = ({navigation}) => {
   {/* Store / Business Icon */}
   <View style={styles.headerIcon}>
     <Icon
-      name="storefront-outline"
+      name="store"
       size={30}
       color="#FFFFFF"
     />
@@ -381,11 +382,11 @@ const DashboardScreen = ({navigation}) => {
 
         <View style={styles.summaryItem}>
 
-          <Icon
-            name="view-dashboard-outline"
-            size={22}
-            color="#2563EB"
-          />
+    <Icon
+  name="view-dashboard"
+  size={22}
+  color="#2563EB"
+/>
 
           <View>
 
@@ -407,11 +408,11 @@ const DashboardScreen = ({navigation}) => {
 
         <View style={styles.summaryItem}>
 
-          <Icon
-            name="shield-account-outline"
-            size={22}
-            color="#059669"
-          />
+        <Icon
+  name="shield-account"
+  size={22}
+  color="#059669"
+/>
 
           <View>
 
@@ -468,7 +469,7 @@ const DashboardScreen = ({navigation}) => {
           <View style={styles.emptyContainer}>
 
             <Icon
-              name="lock-outline"
+              name="lock"
               size={50}
               color="#94A3B8"
             />

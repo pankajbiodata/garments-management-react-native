@@ -9,8 +9,11 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Customer';
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+} from '../services/api';
 
 const CustomerScreen = ({navigation}) => {
   const [customer, setCustomer] = useState({
@@ -21,6 +24,7 @@ const CustomerScreen = ({navigation}) => {
   });
 
   const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Handle input
   const handleInputChange = (key, value) => {
@@ -30,29 +34,48 @@ const CustomerScreen = ({navigation}) => {
     }));
   };
 
-  // GET customers
+  // =========================================================
+  // GET CUSTOMERS
+  // =========================================================
+
   const loadCustomers = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/GetCustomersList`,
+      setLoading(true);
+
+      console.log('Loading customers...');
+
+      const data = await apiGet(
+        '/Customer/GetCustomersList',
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      console.log(
+        'Customers API response:',
+        data,
+      );
 
-      const data = await response.json();
-
-      console.log('Customers:', data);
-
-      setCustomers(Array.isArray(data) ? data : []);
+      setCustomers(
+        Array.isArray(data) ? data : [],
+      );
     } catch (error) {
-      console.error('Load customers error:', error);
-
-      Alert.alert(
-        'Error',
-        'Unable to load customers',
+      console.error(
+        'Load customers error:',
+        error,
       );
+
+      if (error.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message ||
+            'Unable to load customers',
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,56 +83,84 @@ const CustomerScreen = ({navigation}) => {
     loadCustomers();
   }, []);
 
-  // ADD customer
+  // =========================================================
+  // ADD CUSTOMER
+  // =========================================================
+
   const handleAddCustomer = async () => {
     try {
-      if (
-        !customer.name.trim() ||
-        !customer.contact.trim() ||
-        !customer.address.trim()
-      ) {
+      if (!customer.name.trim()) {
         Alert.alert(
           'Validation',
-          'Name, Contact and Address are required',
+          'Customer name is required.',
         );
         return;
       }
 
-      const response = await fetch(
-        `${API_URL}/AddCustomer`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: customer.name.trim(),
-            contact: customer.contact.trim(),
-            address: customer.address.trim(),
-            transactions:
-              Number(customer.transactions) || 0,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        console.error(
-          'Add customer response:',
-          errorText,
+      if (!customer.contact.trim()) {
+        Alert.alert(
+          'Validation',
+          'Customer contact is required.',
         );
-
-        throw new Error(
-          `HTTP ${response.status}`,
-        );
+        return;
       }
 
-      const data = await response.json();
+      if (!customer.address.trim()) {
+        Alert.alert(
+          'Validation',
+          'Customer address is required.',
+        );
+        return;
+      }
 
-      console.log('Add customer response:', data);
+      const transactions =
+        customer.transactions === '' ||
+        customer.transactions == null
+          ? 0
+          : Number(customer.transactions);
 
-      // API returns only Message, so reload the list
+      if (Number.isNaN(transactions)) {
+        Alert.alert(
+          'Validation',
+          'Transactions must be a number.',
+        );
+        return;
+      }
+
+      if (transactions < 0) {
+        Alert.alert(
+          'Validation',
+          'Transactions cannot be negative.',
+        );
+        return;
+      }
+
+      const payload = {
+        name: customer.name.trim(),
+        contact: customer.contact.trim(),
+        address: customer.address.trim(),
+        transactions: transactions,
+      };
+
+      console.log(
+        'ADD CUSTOMER PAYLOAD:',
+        JSON.stringify(
+          payload,
+          null,
+          2,
+        ),
+      );
+
+      await apiPost(
+        '/Customer/AddCustomer',
+        payload,
+      );
+
+      console.log(
+        'Customer added successfully.',
+      );
+
+      // Reload list
       await loadCustomers();
 
       // Clear form
@@ -122,7 +173,7 @@ const CustomerScreen = ({navigation}) => {
 
       Alert.alert(
         'Success',
-        'Customer added successfully',
+        'Customer added successfully.',
       );
     } catch (error) {
       console.error(
@@ -130,14 +181,25 @@ const CustomerScreen = ({navigation}) => {
         error,
       );
 
-      Alert.alert(
-        'Error',
-        'Unable to add customer',
-      );
+      if (error.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message ||
+            'Unable to add customer.',
+        );
+      }
     }
   };
 
-  // DELETE customer
+  // =========================================================
+  // DELETE CUSTOMER
+  // =========================================================
+
   const handleDeleteCustomer = id => {
     Alert.alert(
       'Delete Customer',
@@ -153,28 +215,17 @@ const CustomerScreen = ({navigation}) => {
 
           onPress: async () => {
             try {
-              const response = await fetch(
-                `${API_URL}/DeleteCustomer/${id}`,
-                {
-                  method: 'DELETE',
-                },
+              console.log(
+                'Deleting customer:',
+                id,
               );
 
-              if (!response.ok) {
-                const errorText =
-                  await response.text();
+              await apiDelete(
+                `/Customer/DeleteCustomer/${encodeURIComponent(
+                  String(id),
+                )}`,
+              );
 
-                console.error(
-                  'Delete response:',
-                  errorText,
-                );
-
-                throw new Error(
-                  `HTTP ${response.status}`,
-                );
-              }
-
-              // Remove from screen
               setCustomers(prev =>
                 prev.filter(
                   item =>
@@ -186,7 +237,7 @@ const CustomerScreen = ({navigation}) => {
 
               Alert.alert(
                 'Success',
-                'Customer deleted successfully',
+                'Customer deleted successfully.',
               );
             } catch (error) {
               console.error(
@@ -194,10 +245,21 @@ const CustomerScreen = ({navigation}) => {
                 error,
               );
 
-              Alert.alert(
-                'Error',
-                'Unable to delete customer',
-              );
+              if (
+                error.message ===
+                'SESSION_EXPIRED'
+              ) {
+                Alert.alert(
+                  'Session Expired',
+                  'Please login again.',
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  error.message ||
+                    'Unable to delete customer.',
+                );
+              }
             }
           },
         },
@@ -205,32 +267,30 @@ const CustomerScreen = ({navigation}) => {
     );
   };
 
-  // Customer row
+  // =========================================================
+  // CUSTOMER ROW
+  // =========================================================
+
   const renderCustomer = ({item}) => {
     return (
       <View style={styles.customerRow}>
 
-        {/* NAME */}
         <Text style={styles.nameCell}>
           {item.name}
         </Text>
 
-        {/* CONTACT */}
         <Text style={styles.contactCell}>
           {item.contact}
         </Text>
 
-        {/* ADDRESS */}
         <Text style={styles.addressCell}>
           {item.address}
         </Text>
 
-        {/* TRANSACTIONS */}
         <Text style={styles.transactionCell}>
           {item.transactions ?? 0}
         </Text>
 
-        {/* EDIT */}
         <View style={styles.buttonCell}>
           <Button
             title="Edit"
@@ -246,7 +306,6 @@ const CustomerScreen = ({navigation}) => {
           />
         </View>
 
-        {/* DELETE */}
         <View style={styles.buttonCell}>
           <Button
             title="Delete"
@@ -263,6 +322,10 @@ const CustomerScreen = ({navigation}) => {
     );
   };
 
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
     <View style={styles.container}>
 
@@ -271,11 +334,12 @@ const CustomerScreen = ({navigation}) => {
       </Text>
 
       {/* ADD CUSTOMER FORM */}
+
       <View style={styles.inputContainer}>
 
         <TextInput
           style={styles.input}
-          placeholder="Customer Name"
+          placeholder="Customer Name *"
           value={customer.name}
           onChangeText={value =>
             handleInputChange(
@@ -287,7 +351,7 @@ const CustomerScreen = ({navigation}) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Contact Number"
+          placeholder="Contact Number *"
           value={customer.contact}
           onChangeText={value =>
             handleInputChange(
@@ -300,7 +364,7 @@ const CustomerScreen = ({navigation}) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Address"
+          placeholder="Address *"
           value={customer.address}
           onChangeText={value =>
             handleInputChange(
@@ -331,9 +395,9 @@ const CustomerScreen = ({navigation}) => {
       </View>
 
       {/* CUSTOMER LIST */}
+
       <View style={styles.table}>
 
-        {/* HEADER */}
         <View style={styles.customerHeader}>
 
           <Text style={styles.nameHeader}>
@@ -362,21 +426,28 @@ const CustomerScreen = ({navigation}) => {
 
         </View>
 
-        {/* DATA */}
-        <FlatList
-          data={customers}
-          keyExtractor={(item, index) =>
-            String(
-              item.customerID ?? index,
-            )
-          }
-          renderItem={renderCustomer}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              No customers found
-            </Text>
-          }
-        />
+        {loading ? (
+          <Text style={styles.emptyText}>
+            Loading customers...
+          </Text>
+        ) : (
+          <FlatList
+            data={customers}
+            keyExtractor={(item, index) =>
+              String(
+                item.customerID ?? index,
+              )
+            }
+            renderItem={renderCustomer}
+            refreshing={loading}
+            onRefresh={loadCustomers}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                No customers found
+              </Text>
+            }
+          />
+        )}
 
       </View>
 
@@ -385,7 +456,6 @@ const CustomerScreen = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
@@ -504,7 +574,6 @@ const styles = StyleSheet.create({
     padding: 30,
     fontSize: 16,
   },
-
 });
 
 export default CustomerScreen;
