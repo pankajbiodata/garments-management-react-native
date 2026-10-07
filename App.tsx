@@ -110,89 +110,89 @@ const DashboardScreen = ({navigation}) => {
 
   const {user, logout} = useAuth();
 
-  const data = [
-    {
-      id: '1',
-      title: 'Employee Management',
-      subtitle: 'Manage employees',
-      icon: 'account-group',
-      color: '#2563EB',
-      route: 'EmployeeScreen',
-    },
+ const data = [
+  {
+    id: '1',
+    title: 'Employee Management',
+    subtitle: 'Manage employees',
+    icon: 'account-group-outline',
+    color: '#2563EB',
+    route: 'EmployeeScreen',
+  },
 
-    {
-      id: '2',
-      title: 'Inventory Management',
-      subtitle: 'Manage stock & items',
-      icon: 'warehouse',
-      color: '#059669',
-      route: 'InventoryScreen',
-    },
+  {
+    id: '2',
+    title: 'Inventory Management',
+    subtitle: 'Manage stock & items',
+    icon: 'warehouse',
+    color: '#059669',
+    route: 'InventoryScreen',
+  },
 
-    {
-      id: '3',
-      title: 'Sales Management',
-      subtitle: 'Manage sales orders',
-      icon: 'cart-arrow-right',
-      color: '#D97706',
-      route: 'SalesScreen',
-    },
+  {
+  id: '3',
+  title: 'Sales Management',
+  subtitle: 'Manage sales orders',
+  icon: 'cart-arrow-right',
+  color: '#D97706',
+  route: 'SalesScreen',
+},
 
-    {
-      id: '4',
-      title: 'Purchase Management',
-      subtitle: 'Manage purchases',
-      icon: 'cart-arrow-down',
-      color: '#7C3AED',
-      route: 'PurchaseScreen',
-    },
+{
+  id: '4',
+  title: 'Purchase Management',
+  subtitle: 'Manage purchases',
+  icon: 'cart-arrow-down',
+  color: '#7C3AED',
+  route: 'PurchaseScreen',
+},
 
-    {
-      id: '5',
-      title: 'Customer Management',
-      subtitle: 'Manage customers',
-      icon: 'account-multiple',
-      color: '#0891B2',
-      route: 'CustomerScreen',
-    },
+  {
+    id: '5',
+    title: 'Customer Management',
+    subtitle: 'Manage customers',
+    icon: 'account-multiple-outline',
+    color: '#0891B2',
+    route: 'CustomerScreen',
+  },
 
-    {
-      id: '6',
-      title: 'Vendor Management',
-      subtitle: 'Manage vendors',
-      icon: 'truck-delivery',
-      color: '#DB2777',
-      route: 'VendorScreen',
-    },
+  {
+    id: '6',
+    title: 'Vendor Management',
+    subtitle: 'Manage vendors',
+    icon: 'truck-outline',
+    color: '#DB2777',
+    route: 'VendorScreen',
+  },
 
-    {
-      id: '7',
-      title: 'Reports',
-      subtitle: 'View business reports',
-      icon: 'chart-box',
-      color: '#DC2626',
-      route: 'Reports',
-    },
+  {
+    id: '7',
+    title: 'Reports',
+    subtitle: 'View business reports',
+    icon: 'chart-bar',
+    color: '#DC2626',
+    route: 'Reports',
+  },
 
-    {
-      id: '8',
-      title: 'Settings',
-      subtitle: 'Application settings',
-      icon: 'cog',
-      color: '#64748B',
-      route: null,
-      disabled: true,
-    },
+  {
+    id: '8',
+    title: 'Settings',
+    subtitle: 'Application settings',
+    icon: 'cog-outline',
+    color: '#64748B',
+    route: null,
+    disabled: true,
+  },
 
-    {
-      id: '9',
-      title: 'User Management',
-      subtitle: 'Manage users & roles',
-      icon: 'account-cog',
-      color: '#7C3AED',
-      route: 'UserManagement',
-    },
-  ];
+  {
+    id: '9',
+    title: 'User Management',
+    subtitle: 'Manage users & roles',
+    icon: 'account-cog-outline',
+    color: '#7C3AED',
+    route: 'UserManagement',
+  },
+];
 
 
   // ==========================================================
@@ -344,30 +344,30 @@ const DashboardScreen = ({navigation}) => {
 
         <View style={styles.headerRight}>
 
-          <View style={styles.headerIcon}>
+  {/* Store / Business Icon */}
+  <View style={styles.headerIcon}>
+    <Icon
+      name="storefront-outline"
+      size={30}
+      color="#FFFFFF"
+    />
+  </View>
 
-            <Icon
-              name="storefront-outline"
-              size={32}
-              color="#FFFFFF"
-            />
+  {/* Logout Button */}
+  <TouchableOpacity
+    style={styles.logoutButton}
+    onPress={logout}
+    activeOpacity={0.7}>
 
-          </View>
+    <Icon
+      name="logout"
+      size={21}
+      color="#FFFFFF"
+    />
 
+  </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={logout}>
-
-            <Icon
-              name="logout"
-              size={21}
-              color="#FFFFFF"
-            />
-
-          </TouchableOpacity>
-
-        </View>
+</View>
 
       </View>
 
@@ -944,38 +944,42 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  headerRight: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+ headerRight: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginLeft: 12,
+},
 
-  headerIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+headerIcon: {
+  width: 58,
+  height: 58,
+  borderRadius: 29,
 
-    backgroundColor: '#1E293B',
+  backgroundColor: '#1E293B',
 
-    justifyContent: 'center',
-    alignItems: 'center',
+  justifyContent: 'center',
+  alignItems: 'center',
 
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
+  borderWidth: 1,
+  borderColor: '#334155',
+},
 
-  logoutButton: {
-    marginTop: 9,
+logoutButton: {
+  marginTop: 10,
 
-    width: 40,
-    height: 36,
+  width: 44,
+  height: 38,
 
-    borderRadius: 9,
+  borderRadius: 10,
 
-    backgroundColor: '#334155',
+  backgroundColor: '#334155',
 
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  alignItems: 'center',
+  justifyContent: 'center',
+
+  borderWidth: 1,
+  borderColor: '#475569',
+},
 
 
   // ========================================================
