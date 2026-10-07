@@ -10,11 +10,11 @@ import {
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/sales';
-
-const CUSTOMER_API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Customer';
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+} from '../services/api';
 
 const SalesScreen = ({navigation}) => {
   const [order, setOrder] = useState({
@@ -31,44 +31,53 @@ const SalesScreen = ({navigation}) => {
     loadCustomers();
   }, []);
 
+  // Handle expired JWT session
+  const handleSessionExpired = () => {
+    Alert.alert(
+      'Session Expired',
+      'Please login again.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'Login'}],
+            });
+          },
+        },
+      ],
+    );
+  };
+
   // Get all customers
   const loadCustomers = async () => {
     try {
-      const response = await fetch(
-        `${CUSTOMER_API_URL}/GetCustomersList`,
-      );
-
-      const responseText = await response.text();
-
-      console.log(
-        'GET CUSTOMERS STATUS:',
-        response.status,
+      const data = await apiGet(
+        '/Customer/GetCustomersList',
       );
 
       console.log(
         'GET CUSTOMERS RESPONSE:',
-        responseText,
+        data,
       );
 
-      if (response.status === 404) {
-        setCustomers([]);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
-
-      const data = JSON.parse(responseText);
-
-      setCustomers(Array.isArray(data) ? data : []);
+      setCustomers(
+        Array.isArray(data) ? data : [],
+      );
     } catch (error) {
       console.error(
         'GET CUSTOMERS ERROR:',
         error,
       );
+
+      if (
+        error?.message ===
+        'SESSION_EXPIRED'
+      ) {
+        handleSessionExpired();
+        return;
+      }
 
       Alert.alert(
         'Error',
@@ -81,33 +90,31 @@ const SalesScreen = ({navigation}) => {
   // Get all sales
   const loadSales = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/getAll`,
-      );
-
-      const responseText = await response.text();
-
-      console.log(
-        'GET SALES STATUS:',
-        response.status,
+      const data = await apiGet(
+        '/sales/getAll',
       );
 
       console.log(
         'GET SALES RESPONSE:',
-        responseText,
+        data,
       );
 
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
-
-      const data = JSON.parse(responseText);
-
-      setOrders(Array.isArray(data) ? data : []);
+      setOrders(
+        Array.isArray(data) ? data : [],
+      );
     } catch (error) {
-      console.error('GET SALES ERROR:', error);
+      console.error(
+        'GET SALES ERROR:',
+        error,
+      );
+
+      if (
+        error?.message ===
+        'SESSION_EXPIRED'
+      ) {
+        handleSessionExpired();
+        return;
+      }
 
       Alert.alert(
         'Error',
@@ -120,9 +127,15 @@ const SalesScreen = ({navigation}) => {
   // Add sales order
   const handleAddOrder = async () => {
     try {
-      const customerId = Number(order.customerId);
+      const customerId = Number(
+        order.customerId,
+      );
 
-      if (!order.customerId || isNaN(customerId)) {
+      if (
+        !order.customerId ||
+        isNaN(customerId) ||
+        customerId <= 0
+      ) {
         Alert.alert(
           'Validation Error',
           'Please select a customer.',
@@ -130,7 +143,11 @@ const SalesScreen = ({navigation}) => {
         return;
       }
 
-      if (!order.date.trim()) {
+      const date = String(
+        order.date ?? '',
+      ).trim();
+
+      if (!date) {
         Alert.alert(
           'Validation Error',
           'Date is required.',
@@ -138,7 +155,21 @@ const SalesScreen = ({navigation}) => {
         return;
       }
 
-      const amount = Number(order.amount);
+      // Basic date validation
+      const datePattern =
+        /^\d{4}-\d{2}-\d{2}$/;
+
+      if (!datePattern.test(date)) {
+        Alert.alert(
+          'Validation Error',
+          'Date must be in YYYY-MM-DD format.',
+        );
+        return;
+      }
+
+      const amount = Number(
+        order.amount,
+      );
 
       if (
         order.amount === '' ||
@@ -147,51 +178,30 @@ const SalesScreen = ({navigation}) => {
       ) {
         Alert.alert(
           'Validation Error',
-          'Amount must be a valid number.',
+          'Amount must be a valid non-negative number.',
         );
         return;
       }
 
       const payload = {
-        customerId,
-        date: `${order.date}T00:00:00`,
-        amount,
+        customerId: customerId,
+        date: `${date}T00:00:00`,
+        amount: amount,
       };
 
       console.log(
         'ADD SALES PAYLOAD:',
+        JSON.stringify(
+          payload,
+          null,
+          2,
+        ),
+      );
+
+      await apiPost(
+        '/sales/addOrder',
         payload,
       );
-
-      const response = await fetch(
-        `${API_URL}/addOrder`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const responseText = await response.text();
-
-      console.log(
-        'ADD SALES STATUS:',
-        response.status,
-      );
-
-      console.log(
-        'ADD SALES RESPONSE:',
-        responseText,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
 
       Alert.alert(
         'Success',
@@ -204,12 +214,20 @@ const SalesScreen = ({navigation}) => {
         amount: '',
       });
 
-      loadSales();
+      await loadSales();
     } catch (error) {
       console.error(
         'ADD SALES ERROR:',
         error,
       );
+
+      if (
+        error?.message ===
+        'SESSION_EXPIRED'
+      ) {
+        handleSessionExpired();
+        return;
+      }
 
       Alert.alert(
         'Error',
@@ -232,40 +250,34 @@ const SalesScreen = ({navigation}) => {
         {
           text: 'Delete',
           style: 'destructive',
+
           onPress: async () => {
             try {
-              const response = await fetch(
-                `${API_URL}/deleteOrder/${encodeURIComponent(
+              await apiDelete(
+                `/sales/deleteOrder/${encodeURIComponent(
                   String(orderId),
                 )}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    Accept: 'application/json',
-                  },
-                },
               );
-
-              const responseText =
-                await response.text();
-
-              if (!response.ok) {
-                throw new Error(
-                  `HTTP ${response.status}: ${responseText}`,
-                );
-              }
 
               Alert.alert(
                 'Success',
                 'Order deleted successfully.',
               );
 
-              loadSales();
+              await loadSales();
             } catch (error) {
               console.error(
                 'DELETE SALES ERROR:',
                 error,
               );
+
+              if (
+                error?.message ===
+                'SESSION_EXPIRED'
+              ) {
+                handleSessionExpired();
+                return;
+              }
 
               Alert.alert(
                 'Error',
@@ -313,7 +325,9 @@ const SalesScreen = ({navigation}) => {
       </Text>
 
       <Text style={styles.customerCell}>
-        {getCustomerName(item.customerId)}
+        {getCustomerName(
+          item.customerId,
+        )}
       </Text>
 
       <Text style={styles.cell}>
@@ -321,17 +335,23 @@ const SalesScreen = ({navigation}) => {
       </Text>
 
       <Text style={styles.cell}>
-        ₹{Number(item.amount).toFixed(2)}
+        ₹
+        {Number(
+          item.amount,
+        ).toFixed(2)}
       </Text>
 
       <View style={styles.actionCell}>
         <Button
           title="Edit"
           onPress={() =>
-            navigation.navigate('EditSales', {
-              id: item.orderId,
-              order: item,
-            })
+            navigation.navigate(
+              'EditSales',
+              {
+                id: item.orderId,
+                order: item,
+              },
+            )
           }
         />
       </View>
@@ -341,7 +361,9 @@ const SalesScreen = ({navigation}) => {
           title="Delete"
           color="red"
           onPress={() =>
-            handleDeleteOrder(item.orderId)
+            handleDeleteOrder(
+              item.orderId,
+            )
           }
         />
       </View>
@@ -360,9 +382,14 @@ const SalesScreen = ({navigation}) => {
         Customer
       </Text>
 
-      <View style={styles.pickerContainer}>
+      <View
+        style={
+          styles.pickerContainer
+        }>
         <Picker
-          selectedValue={order.customerId}
+          selectedValue={
+            order.customerId
+          }
           onValueChange={value =>
             setOrder(prev => ({
               ...prev,
@@ -374,15 +401,23 @@ const SalesScreen = ({navigation}) => {
             value=""
           />
 
-          {customers.map(customer => (
-            <Picker.Item
-              key={String(customer.customerID)}
-              label={`${customer.name} (${customer.customerID})`}
-              value={String(customer.customerID)}
-            />
-          ))}
+          {customers.map(
+            customer => (
+              <Picker.Item
+                key={String(
+                  customer.customerID,
+                )}
+                label={`${customer.name} (${customer.customerID})`}
+                value={String(
+                  customer.customerID,
+                )}
+              />
+            ),
+          )}
         </Picker>
       </View>
+
+      {/* Date */}
 
       <TextInput
         style={styles.input}
@@ -395,6 +430,8 @@ const SalesScreen = ({navigation}) => {
           }))
         }
       />
+
+      {/* Amount */}
 
       <TextInput
         style={styles.input}
@@ -409,50 +446,82 @@ const SalesScreen = ({navigation}) => {
         keyboardType="decimal-pad"
       />
 
-      <View style={styles.addButton}>
+      {/* Add */}
+
+      <View
+        style={styles.addButton}>
         <Button
           title="Add Sales Order"
-          onPress={handleAddOrder}
+          onPress={
+            handleAddOrder
+          }
         />
       </View>
 
       {/* Table Header */}
 
-      <View style={styles.headerRow}>
-        <Text style={styles.headerCell}>
+      <View
+        style={styles.headerRow}>
+        <Text
+          style={
+            styles.headerCell
+          }>
           Order ID
         </Text>
 
-        <Text style={styles.headerCell}>
+        <Text
+          style={
+            styles.headerCell
+          }>
           Customer
         </Text>
 
-        <Text style={styles.headerCell}>
+        <Text
+          style={
+            styles.headerCell
+          }>
           Date
         </Text>
 
-        <Text style={styles.headerCell}>
+        <Text
+          style={
+            styles.headerCell
+          }>
           Amount
         </Text>
 
-        <Text style={styles.headerCell}>
+        <Text
+          style={
+            styles.headerCell
+          }>
           Edit
         </Text>
 
-        <Text style={styles.headerCell}>
+        <Text
+          style={
+            styles.headerCell
+          }>
           Delete
         </Text>
       </View>
+
+      {/* Sales Orders */}
 
       <FlatList
         data={orders}
         keyExtractor={item =>
           String(item.orderId)
         }
-        renderItem={renderItem}
+        renderItem={
+          renderItem
+        }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            No sales orders found.
+          <Text
+            style={
+              styles.emptyText
+            }>
+            No sales orders
+            found.
           </Text>
         }
       />

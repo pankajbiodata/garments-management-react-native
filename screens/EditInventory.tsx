@@ -8,21 +8,20 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Inventory';
+import {apiPut} from '../services/api';
 
 const EditInventory = ({route, navigation}) => {
   const {id, item} = route.params;
 
   const [updatedItem, setUpdatedItem] = useState({
-    itemID: item.itemID || id || '',
-    name: item.name || '',
+    itemID: item?.itemID || id || '',
+    name: item?.name || '',
     quantity:
-      item.quantity != null
+      item?.quantity != null
         ? String(item.quantity)
         : '',
     unitPrice:
-      item.unitPrice != null
+      item?.unitPrice != null
         ? String(item.unitPrice)
         : '',
   });
@@ -36,10 +35,19 @@ const EditInventory = ({route, navigation}) => {
 
   const handleUpdateItem = async () => {
     try {
-      const itemID = Number(updatedItem.itemID);
-      const name = String(updatedItem.name ?? '').trim();
+      const itemID = Number(
+        updatedItem.itemID,
+      );
 
-      if (!itemID || isNaN(itemID)) {
+      const name = String(
+        updatedItem.name ?? '',
+      ).trim();
+
+      // Validate Item ID
+      if (
+        !Number.isInteger(itemID) ||
+        itemID <= 0
+      ) {
         Alert.alert(
           'Validation Error',
           'Item ID is invalid.',
@@ -47,6 +55,7 @@ const EditInventory = ({route, navigation}) => {
         return;
       }
 
+      // Validate Item Name
       if (!name) {
         Alert.alert(
           'Validation Error',
@@ -55,7 +64,10 @@ const EditInventory = ({route, navigation}) => {
         return;
       }
 
-      if (updatedItem.quantity === '') {
+      // Validate Quantity
+      if (
+        updatedItem.quantity === ''
+      ) {
         Alert.alert(
           'Validation Error',
           'Quantity is required.',
@@ -63,9 +75,14 @@ const EditInventory = ({route, navigation}) => {
         return;
       }
 
-      const quantity = Number(updatedItem.quantity);
+      const quantity = Number(
+        updatedItem.quantity,
+      );
 
-      if (!Number.isInteger(quantity) || quantity < 0) {
+      if (
+        !Number.isInteger(quantity) ||
+        quantity < 0
+      ) {
         Alert.alert(
           'Validation Error',
           'Quantity must be a valid whole number.',
@@ -73,7 +90,10 @@ const EditInventory = ({route, navigation}) => {
         return;
       }
 
-      if (updatedItem.unitPrice === '') {
+      // Validate Unit Price
+      if (
+        updatedItem.unitPrice === ''
+      ) {
         Alert.alert(
           'Validation Error',
           'Unit Price is required.',
@@ -81,9 +101,14 @@ const EditInventory = ({route, navigation}) => {
         return;
       }
 
-      const unitPrice = Number(updatedItem.unitPrice);
+      const unitPrice = Number(
+        updatedItem.unitPrice,
+      );
 
-      if (isNaN(unitPrice) || unitPrice < 0) {
+      if (
+        !Number.isFinite(unitPrice) ||
+        unitPrice < 0
+      ) {
         Alert.alert(
           'Validation Error',
           'Unit Price must be a valid number.',
@@ -103,37 +128,12 @@ const EditInventory = ({route, navigation}) => {
         payload,
       );
 
-      const response = await fetch(
-        `${API_URL}/UpdateItem/${encodeURIComponent(
+      await apiPut(
+        `/Inventory/UpdateItem/${encodeURIComponent(
           String(itemID),
         )}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
+        payload,
       );
-
-      const responseText = await response.text();
-
-      console.log(
-        'UPDATE INVENTORY STATUS:',
-        response.status,
-      );
-
-      console.log(
-        'UPDATE INVENTORY RESPONSE:',
-        responseText,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
 
       Alert.alert(
         'Success',
@@ -141,7 +141,8 @@ const EditInventory = ({route, navigation}) => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () =>
+              navigation.goBack(),
           },
         ],
       );
@@ -150,6 +151,32 @@ const EditInventory = ({route, navigation}) => {
         'UPDATE INVENTORY ERROR:',
         error,
       );
+
+      // JWT expired
+      if (
+        error?.message ===
+        'SESSION_EXPIRED'
+      ) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [
+                    {name: 'Login'},
+                  ],
+                });
+              },
+            },
+          ],
+        );
+
+        return;
+      }
 
       Alert.alert(
         'Update Error',
@@ -165,54 +192,79 @@ const EditInventory = ({route, navigation}) => {
         Edit Inventory Item
       </Text>
 
+      {/* Item ID - Read Only */}
       <TextInput
         style={styles.input}
         placeholder="Item ID"
-        value={String(updatedItem.itemID ?? '')}
+        value={String(
+          updatedItem.itemID ?? '',
+        )}
         editable={false}
       />
 
+      {/* Item Name */}
       <TextInput
         style={styles.input}
         placeholder="Item Name"
         value={updatedItem.name}
         onChangeText={value =>
-          handleInputChange('name', value)
+          handleInputChange(
+            'name',
+            value,
+          )
         }
       />
 
+      {/* Quantity */}
       <TextInput
         style={styles.input}
         placeholder="Quantity"
-        value={String(updatedItem.quantity ?? '')}
+        value={String(
+          updatedItem.quantity ?? '',
+        )}
         onChangeText={value =>
-          handleInputChange('quantity', value)
+          handleInputChange(
+            'quantity',
+            value,
+          )
         }
         keyboardType="numeric"
       />
 
+      {/* Unit Price */}
       <TextInput
         style={styles.input}
         placeholder="Unit Price"
-        value={String(updatedItem.unitPrice ?? '')}
+        value={String(
+          updatedItem.unitPrice ?? '',
+        )}
         onChangeText={value =>
-          handleInputChange('unitPrice', value)
+          handleInputChange(
+            'unitPrice',
+            value,
+          )
         }
         keyboardType="decimal-pad"
       />
 
+      {/* Update */}
       <View style={styles.button}>
         <Button
           title="Update Item"
-          onPress={handleUpdateItem}
+          onPress={
+            handleUpdateItem
+          }
         />
       </View>
 
+      {/* Cancel */}
       <View style={styles.button}>
         <Button
           title="Cancel"
           color="gray"
-          onPress={() => navigation.goBack()}
+          onPress={() =>
+            navigation.goBack()
+          }
         />
       </View>
     </View>

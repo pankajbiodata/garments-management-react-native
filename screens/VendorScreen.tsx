@@ -9,8 +9,11 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Vendor';
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+} from '../services/api';
 
 const VendorScreen = ({navigation}) => {
   const [vendor, setVendor] = useState({
@@ -33,22 +36,9 @@ const VendorScreen = ({navigation}) => {
   // GET vendors
   const loadVendors = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/GetVendorList`,
+      const data = await apiGet(
+        '/Vendor/GetVendorList',
       );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        console.error(
-          'Load vendors response:',
-          errorText,
-        );
-
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
 
       console.log('Vendors:', data);
 
@@ -61,9 +51,29 @@ const VendorScreen = ({navigation}) => {
         error,
       );
 
+      if (error?.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
+
       Alert.alert(
         'Error',
-        'Unable to load vendors',
+        error?.message ||
+          'Unable to load vendors',
       );
     }
   };
@@ -101,6 +111,14 @@ const VendorScreen = ({navigation}) => {
         return;
       }
 
+      if (transactions < 0) {
+        Alert.alert(
+          'Validation',
+          'Transactions cannot be negative',
+        );
+        return;
+      }
+
       const payload = {
         name: vendor.name.trim(),
         contact: vendor.contact.trim(),
@@ -113,41 +131,15 @@ const VendorScreen = ({navigation}) => {
         JSON.stringify(payload, null, 2),
       );
 
-      const response = await fetch(
-        `${API_URL}/AddVendor`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
+      await apiPost(
+        '/Vendor/AddVendor',
+        payload,
       );
 
-      const responseText =
-        await response.text();
-
-      console.log(
-        'HTTP STATUS:',
-        response.status,
-      );
-
-      console.log(
-        'SERVER RESPONSE:',
-        responseText,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
-
-      // Controller returns Message,
-      // therefore reload list.
+      // Reload list
       await loadVendors();
 
+      // Clear form
       setVendor({
         name: '',
         contact: '',
@@ -164,6 +156,25 @@ const VendorScreen = ({navigation}) => {
         'Add vendor error:',
         error,
       );
+
+      if (error?.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
 
       Alert.alert(
         'Error',
@@ -189,34 +200,11 @@ const VendorScreen = ({navigation}) => {
 
           onPress: async () => {
             try {
-              const response = await fetch(
-                `${API_URL}/DeleteVendor/${id}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    Accept: 'application/json',
-                  },
-                },
+              await apiDelete(
+                `/Vendor/DeleteVendor/${encodeURIComponent(
+                  String(id),
+                )}`,
               );
-
-              const responseText =
-                await response.text();
-
-              console.log(
-                'DELETE STATUS:',
-                response.status,
-              );
-
-              console.log(
-                'DELETE RESPONSE:',
-                responseText,
-              );
-
-              if (!response.ok) {
-                throw new Error(
-                  `HTTP ${response.status}: ${responseText}`,
-                );
-              }
 
               setVendors(prev =>
                 prev.filter(
@@ -237,9 +225,34 @@ const VendorScreen = ({navigation}) => {
                 error,
               );
 
+              if (
+                error?.message ===
+                'SESSION_EXPIRED'
+              ) {
+                Alert.alert(
+                  'Session Expired',
+                  'Please login again.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        navigation.reset({
+                          index: 0,
+                          routes: [
+                            {name: 'Login'},
+                          ],
+                        });
+                      },
+                    },
+                  ],
+                );
+                return;
+              }
+
               Alert.alert(
                 'Error',
-                'Unable to delete vendor',
+                error?.message ||
+                  'Unable to delete vendor',
               );
             }
           },
@@ -252,7 +265,6 @@ const VendorScreen = ({navigation}) => {
   const renderVendor = ({item}) => {
     return (
       <View style={styles.vendorRow}>
-
         {/* NAME */}
         <Text style={styles.nameCell}>
           {item.name}
@@ -301,21 +313,18 @@ const VendorScreen = ({navigation}) => {
             }
           />
         </View>
-
       </View>
     );
   };
 
   return (
     <View style={styles.container}>
-
       <Text style={styles.header}>
         Vendor List
       </Text>
 
       {/* ADD VENDOR FORM */}
       <View style={styles.inputContainer}>
-
         <TextInput
           style={styles.input}
           placeholder="Vendor Name"
@@ -370,15 +379,12 @@ const VendorScreen = ({navigation}) => {
           title="Add Vendor"
           onPress={handleAddVendor}
         />
-
       </View>
 
       {/* VENDOR LIST */}
       <View style={styles.table}>
-
         {/* HEADER */}
         <View style={styles.vendorHeader}>
-
           <Text style={styles.nameHeader}>
             Name
           </Text>
@@ -391,7 +397,10 @@ const VendorScreen = ({navigation}) => {
             Address
           </Text>
 
-          <Text style={styles.transactionHeader}>
+          <Text
+            style={
+              styles.transactionHeader
+            }>
             Transactions
           </Text>
 
@@ -402,7 +411,6 @@ const VendorScreen = ({navigation}) => {
           <Text style={styles.actionHeader}>
             Delete
           </Text>
-
         </View>
 
         {/* DATA */}
@@ -420,15 +428,12 @@ const VendorScreen = ({navigation}) => {
             </Text>
           }
         />
-
       </View>
-
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
@@ -547,7 +552,6 @@ const styles = StyleSheet.create({
     padding: 30,
     fontSize: 16,
   },
-
 });
 
 export default VendorScreen;

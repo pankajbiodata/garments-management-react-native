@@ -8,21 +8,19 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Customer';
+import {apiPut} from '../services/api';
 
 const EditCustomer = ({route, navigation}) => {
-
   // Get customer passed from CustomerScreen
   const {id, customer} = route.params;
 
   const [updatedCustomer, setUpdatedCustomer] = useState({
-    customerID: customer.customerID || id || '',
-    name: customer.name || '',
-    contact: customer.contact || '',
-    address: customer.address || '',
+    customerID: customer?.customerID || id || '',
+    name: customer?.name || '',
+    contact: customer?.contact || '',
+    address: customer?.address || '',
     transactions:
-      customer.transactions != null
+      customer?.transactions != null
         ? String(customer.transactions)
         : '0',
   });
@@ -109,43 +107,28 @@ const EditCustomer = ({route, navigation}) => {
         transactions: transactions,
       };
 
-      console.log('UPDATE CUSTOMER PAYLOAD:');
       console.log(
+        'UPDATE CUSTOMER PAYLOAD:',
         JSON.stringify(payload, null, 2),
       );
 
-      const response = await fetch(
-        `${API_URL}/UpdateCustomer/${encodeURIComponent(
+      /*
+       * apiPut automatically reads the JWT token from
+       * AsyncStorage and sends:
+       *
+       * Authorization: Bearer <token>
+       */
+      const response = await apiPut(
+        `/Customer/UpdateCustomer/${encodeURIComponent(
           String(customerID),
         )}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const responseText =
-        await response.text();
-
-      console.log(
-        'HTTP STATUS:',
-        response.status,
+        payload,
       );
 
       console.log(
-        'SERVER RESPONSE:',
-        responseText,
+        'UPDATE CUSTOMER RESPONSE:',
+        response,
       );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
 
       Alert.alert(
         'Success',
@@ -153,17 +136,34 @@ const EditCustomer = ({route, navigation}) => {
         [
           {
             text: 'OK',
-            onPress: () =>
-              navigation.goBack(),
+            onPress: () => navigation.goBack(),
           },
         ],
       );
-
     } catch (error) {
       console.error(
         'UPDATE CUSTOMER ERROR:',
         error,
       );
+
+      if (error?.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
 
       Alert.alert(
         'Update Error',
@@ -175,7 +175,6 @@ const EditCustomer = ({route, navigation}) => {
 
   return (
     <View style={styles.container}>
-
       <Text style={styles.header}>
         Edit Customer
       </Text>
@@ -183,7 +182,10 @@ const EditCustomer = ({route, navigation}) => {
       {/* Customer ID */}
 
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          styles.disabledInput,
+        ]}
         placeholder="Customer ID"
         value={String(
           updatedCustomer.customerID ?? '',
@@ -198,10 +200,7 @@ const EditCustomer = ({route, navigation}) => {
         placeholder="Customer Name"
         value={updatedCustomer.name}
         onChangeText={value =>
-          handleInputChange(
-            'name',
-            value,
-          )
+          handleInputChange('name', value)
         }
       />
 
@@ -212,10 +211,7 @@ const EditCustomer = ({route, navigation}) => {
         placeholder="Contact Number"
         value={updatedCustomer.contact}
         onChangeText={value =>
-          handleInputChange(
-            'contact',
-            value,
-          )
+          handleInputChange('contact', value)
         }
         keyboardType="phone-pad"
       />
@@ -227,10 +223,7 @@ const EditCustomer = ({route, navigation}) => {
         placeholder="Address"
         value={updatedCustomer.address}
         onChangeText={value =>
-          handleInputChange(
-            'address',
-            value,
-          )
+          handleInputChange('address', value)
         }
       />
 
@@ -271,13 +264,11 @@ const EditCustomer = ({route, navigation}) => {
           }
         />
       </View>
-
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
@@ -299,10 +290,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  disabledInput: {
+    backgroundColor: '#f0f0f0',
+    color: '#666',
+  },
+
   button: {
     marginTop: 10,
   },
-
 });
 
 export default EditCustomer;

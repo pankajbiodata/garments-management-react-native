@@ -9,8 +9,11 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Inventory';
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+} from '../services/api';
 
 const InventoryScreen = ({navigation}) => {
   const [item, setItem] = useState({
@@ -25,38 +28,72 @@ const InventoryScreen = ({navigation}) => {
     loadInventory();
   }, []);
 
+  // Handle expired/invalid JWT session
+  const handleApiError = error => {
+    if (error?.message === 'SESSION_EXPIRED') {
+      Alert.alert(
+        'Session Expired',
+        'Your session has expired. Please login again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{name: 'Login'}],
+              });
+            },
+          },
+        ],
+      );
+
+      return true;
+    }
+
+    return false;
+  };
+
   // Get inventory list
   const loadInventory = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/GetInventoryReport`,
+      const data = await apiGet(
+        '/Inventory/GetInventoryReport',
       );
 
-      const responseText = await response.text();
+      console.log(
+        'GET INVENTORY RESPONSE:',
+        data,
+      );
 
-      console.log('GET INVENTORY STATUS:', response.status);
-      console.log('GET INVENTORY RESPONSE:', responseText);
+      setItems(
+        Array.isArray(data)
+          ? data
+          : [],
+      );
+    } catch (error) {
+      console.error(
+        'GET INVENTORY ERROR:',
+        error,
+      );
 
-      if (response.status === 404) {
+      // 404 means there are currently no items
+      if (
+        error?.message?.includes(
+          'No items found in inventory',
+        )
+      ) {
         setItems([]);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
+      if (handleApiError(error)) {
+        return;
       }
-
-      const data = JSON.parse(responseText);
-
-      setItems(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('GET INVENTORY ERROR:', error);
 
       Alert.alert(
         'Error',
-        error?.message || 'Unable to load inventory.',
+        error?.message ||
+          'Unable to load inventory.',
       );
     }
   };
@@ -64,7 +101,8 @@ const InventoryScreen = ({navigation}) => {
   // Add inventory item
   const handleAddItem = async () => {
     try {
-      const name = String(item.name ?? '').trim();
+      const name =
+        String(item.name ?? '').trim();
 
       if (!name) {
         Alert.alert(
@@ -82,9 +120,13 @@ const InventoryScreen = ({navigation}) => {
         return;
       }
 
-      const quantity = Number(item.quantity);
+      const quantity =
+        Number(item.quantity);
 
-      if (!Number.isInteger(quantity) || quantity < 0) {
+      if (
+        !Number.isInteger(quantity) ||
+        quantity < 0
+      ) {
         Alert.alert(
           'Validation Error',
           'Quantity must be a valid whole number.',
@@ -100,9 +142,13 @@ const InventoryScreen = ({navigation}) => {
         return;
       }
 
-      const unitPrice = Number(item.unitPrice);
+      const unitPrice =
+        Number(item.unitPrice);
 
-      if (isNaN(unitPrice) || unitPrice < 0) {
+      if (
+        !Number.isFinite(unitPrice) ||
+        unitPrice < 0
+      ) {
         Alert.alert(
           'Validation Error',
           'Unit Price must be a valid number.',
@@ -116,30 +162,15 @@ const InventoryScreen = ({navigation}) => {
         unitPrice,
       };
 
-      console.log('ADD INVENTORY PAYLOAD:', payload);
-
-      const response = await fetch(
-        `${API_URL}/AddItem`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
+      console.log(
+        'ADD INVENTORY PAYLOAD:',
+        payload,
       );
 
-      const responseText = await response.text();
-
-      console.log('ADD INVENTORY STATUS:', response.status);
-      console.log('ADD INVENTORY RESPONSE:', responseText);
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
+      await apiPost(
+        '/Inventory/AddItem',
+        payload,
+      );
 
       Alert.alert(
         'Success',
@@ -152,20 +183,36 @@ const InventoryScreen = ({navigation}) => {
         unitPrice: '',
       });
 
-      // Reload list because API returns only Message
-      loadInventory();
+      // Reload inventory list
+      await loadInventory();
     } catch (error) {
-      console.error('ADD INVENTORY ERROR:', error);
+      console.error(
+        'ADD INVENTORY ERROR:',
+        error,
+      );
+
+      if (handleApiError(error)) {
+        return;
+      }
 
       Alert.alert(
         'Error',
-        error?.message || 'Unable to add item.',
+        error?.message ||
+          'Unable to add item.',
       );
     }
   };
 
   // Delete inventory item
   const handleDeleteItem = id => {
+    if (!id) {
+      Alert.alert(
+        'Error',
+        'Invalid inventory item ID.',
+      );
+      return;
+    }
+
     Alert.alert(
       'Delete Item',
       'Are you sure you want to delete this item?',
@@ -177,50 +224,30 @@ const InventoryScreen = ({navigation}) => {
         {
           text: 'Delete',
           style: 'destructive',
+
           onPress: async () => {
             try {
-              const response = await fetch(
-                `${API_URL}/DeleteItem/${encodeURIComponent(
+              await apiDelete(
+                `/Inventory/DeleteItem/${encodeURIComponent(
                   String(id),
                 )}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    Accept: 'application/json',
-                  },
-                },
               );
-
-              const responseText =
-                await response.text();
-
-              console.log(
-                'DELETE INVENTORY STATUS:',
-                response.status,
-              );
-
-              console.log(
-                'DELETE INVENTORY RESPONSE:',
-                responseText,
-              );
-
-              if (!response.ok) {
-                throw new Error(
-                  `HTTP ${response.status}: ${responseText}`,
-                );
-              }
 
               Alert.alert(
                 'Success',
                 'Item deleted successfully.',
               );
 
-              loadInventory();
+              await loadInventory();
             } catch (error) {
               console.error(
                 'DELETE INVENTORY ERROR:',
                 error,
               );
+
+              if (handleApiError(error)) {
+                return;
+              }
 
               Alert.alert(
                 'Error',
@@ -237,7 +264,11 @@ const InventoryScreen = ({navigation}) => {
   // Render one inventory row
   const renderItem = ({item}) => (
     <View style={styles.row}>
-      <Text style={[styles.cell, styles.nameCell]}>
+      <Text
+        style={[
+          styles.cell,
+          styles.nameCell,
+        ]}>
         {item.name}
       </Text>
 
@@ -246,17 +277,23 @@ const InventoryScreen = ({navigation}) => {
       </Text>
 
       <Text style={styles.cell}>
-        ₹{Number(item.unitPrice).toFixed(2)}
+        ₹
+        {Number(
+          item.unitPrice || 0,
+        ).toFixed(2)}
       </Text>
 
       <View style={styles.actionCell}>
         <Button
           title="Edit"
           onPress={() =>
-            navigation.navigate('EditInventory', {
-              id: item.itemID,
-              item: item,
-            })
+            navigation.navigate(
+              'EditInventory',
+              {
+                id: item.itemID,
+                item: item,
+              },
+            )
           }
         />
       </View>
@@ -266,7 +303,9 @@ const InventoryScreen = ({navigation}) => {
           title="Delete"
           color="red"
           onPress={() =>
-            handleDeleteItem(item.itemID)
+            handleDeleteItem(
+              item.itemID,
+            )
           }
         />
       </View>
@@ -329,7 +368,11 @@ const InventoryScreen = ({navigation}) => {
       {/* Table Header */}
 
       <View style={styles.headerRow}>
-        <Text style={[styles.headerCell, styles.nameCell]}>
+        <Text
+          style={[
+            styles.headerCell,
+            styles.nameCell,
+          ]}>
           Name
         </Text>
 

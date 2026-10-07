@@ -8,21 +8,19 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Vendor';
+import {apiPut} from '../services/api';
 
 const EditVendor = ({route, navigation}) => {
-
   // Get vendor passed from VendorScreen
   const {id, vendor} = route.params;
 
   const [updatedVendor, setUpdatedVendor] = useState({
-    vendorID: vendor.vendorID || id || '',
-    name: vendor.name || '',
-    contact: vendor.contact || '',
-    address: vendor.address || '',
+    vendorID: vendor?.vendorID || id || '',
+    name: vendor?.name || '',
+    contact: vendor?.contact || '',
+    address: vendor?.address || '',
     transactions:
-      vendor.transactions != null
+      vendor?.transactions != null
         ? String(vendor.transactions)
         : '0',
   });
@@ -101,6 +99,14 @@ const EditVendor = ({route, navigation}) => {
         return;
       }
 
+      if (transactions < 0) {
+        Alert.alert(
+          'Validation Error',
+          'Transactions cannot be negative.',
+        );
+        return;
+      }
+
       const payload = {
         vendorID: vendorID,
         name: name,
@@ -111,44 +117,27 @@ const EditVendor = ({route, navigation}) => {
 
       console.log(
         'UPDATE VENDOR PAYLOAD:',
-      );
-
-      console.log(
         JSON.stringify(payload, null, 2),
       );
 
-      const response = await fetch(
-        `${API_URL}/UpdateVendor/${encodeURIComponent(
+      /*
+       * apiPut automatically adds:
+       *
+       * Authorization: Bearer <JWT>
+       *
+       * from AsyncStorage.
+       */
+      const response = await apiPut(
+        `/Vendor/UpdateVendor/${encodeURIComponent(
           String(vendorID),
         )}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const responseText =
-        await response.text();
-
-      console.log(
-        'HTTP STATUS:',
-        response.status,
+        payload,
       );
 
       console.log(
-        'SERVER RESPONSE:',
-        responseText,
+        'UPDATE VENDOR RESPONSE:',
+        response,
       );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
 
       Alert.alert(
         'Success',
@@ -161,12 +150,33 @@ const EditVendor = ({route, navigation}) => {
           },
         ],
       );
-
     } catch (error) {
       console.error(
         'UPDATE VENDOR ERROR:',
         error,
       );
+
+      if (
+        error?.message ===
+        'SESSION_EXPIRED'
+      ) {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
 
       Alert.alert(
         'Update Error',
@@ -178,7 +188,6 @@ const EditVendor = ({route, navigation}) => {
 
   return (
     <View style={styles.container}>
-
       <Text style={styles.header}>
         Edit Vendor
       </Text>
@@ -186,7 +195,10 @@ const EditVendor = ({route, navigation}) => {
       {/* Vendor ID */}
 
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          styles.disabledInput,
+        ]}
         placeholder="Vendor ID"
         value={String(
           updatedVendor.vendorID ?? '',
@@ -274,13 +286,11 @@ const EditVendor = ({route, navigation}) => {
           }
         />
       </View>
-
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
@@ -302,10 +312,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  disabledInput: {
+    backgroundColor: '#f0f0f0',
+    color: '#666',
+  },
+
   button: {
     marginTop: 10,
   },
-
 });
 
 export default EditVendor;

@@ -9,12 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
-
-const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Purchase';
-
-const VENDOR_API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Vendor';
+import {apiGet, apiPost} from '../services/api';
 
 const PurchaseScreen = ({navigation}) => {
   const [purchase, setPurchase] = useState({
@@ -31,93 +26,74 @@ const PurchaseScreen = ({navigation}) => {
     loadVendors();
   }, []);
 
-  // Load vendors for dropdown
+  // -----------------------------------------
+  // Load vendors
+  // -----------------------------------------
   const loadVendors = async () => {
     try {
-      const response = await fetch(
-        `${VENDOR_API_URL}/GetVendorList`,
-      );
+      const data = await apiGet('/Vendor/GetVendorList');
 
-      const responseText = await response.text();
-
-      console.log(
-        'GET VENDORS STATUS:',
-        response.status,
-      );
-
-      console.log(
-        'GET VENDORS RESPONSE:',
-        responseText,
-      );
-
-      if (response.status === 404) {
-        setVendors([]);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
-
-      const data = JSON.parse(responseText);
+      console.log('GET VENDORS RESPONSE:', data);
 
       setVendors(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error(
-        'GET VENDORS ERROR:',
-        error,
-      );
+      console.error('GET VENDORS ERROR:', error);
+
+      if (error?.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () =>
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                }),
+            },
+          ],
+        );
+        return;
+      }
 
       Alert.alert(
         'Error',
-        error?.message ||
-          'Unable to load vendors.',
+        error?.message || 'Unable to load vendors.',
       );
     }
   };
 
+  // -----------------------------------------
   // Load purchase orders
+  // -----------------------------------------
   const loadPurchases = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/GetPurchaseReport`,
-      );
+      const data = await apiGet('/Purchase/GetPurchaseReport');
 
-      const responseText = await response.text();
+      console.log('GET PURCHASE RESPONSE:', data);
 
-      console.log(
-        'GET PURCHASE STATUS:',
-        response.status,
-      );
+      setPurchases(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('GET PURCHASE ERROR:', error);
 
-      console.log(
-        'GET PURCHASE RESPONSE:',
-        responseText,
-      );
-
-      if (response.status === 404) {
-        setPurchases([]);
+      if (error?.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () =>
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                }),
+            },
+          ],
+        );
         return;
       }
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
-
-      const data = JSON.parse(responseText);
-
-      setPurchases(
-        Array.isArray(data) ? data : [],
-      );
-    } catch (error) {
-      console.error(
-        'GET PURCHASE ERROR:',
-        error,
-      );
 
       Alert.alert(
         'Error',
@@ -127,7 +103,9 @@ const PurchaseScreen = ({navigation}) => {
     }
   };
 
+  // -----------------------------------------
   // Get vendor name
+  // -----------------------------------------
   const getVendorName = vendorID => {
     const vendor = vendors.find(
       v =>
@@ -137,19 +115,23 @@ const PurchaseScreen = ({navigation}) => {
 
     return vendor
       ? vendor.name
-      : String(vendorID);
+      : String(vendorID ?? '');
   };
 
+  // -----------------------------------------
   // Add purchase order
+  // -----------------------------------------
   const handleAddPurchase = async () => {
     try {
       const vendorID = Number(
         purchase.vendorID,
       );
 
+      // Vendor validation
       if (
         !purchase.vendorID ||
-        isNaN(vendorID)
+        Number.isNaN(vendorID) ||
+        vendorID <= 0
       ) {
         Alert.alert(
           'Validation Error',
@@ -158,6 +140,7 @@ const PurchaseScreen = ({navigation}) => {
         return;
       }
 
+      // Date validation
       const date = String(
         purchase.date ?? '',
       ).trim();
@@ -170,26 +153,39 @@ const PurchaseScreen = ({navigation}) => {
         return;
       }
 
+      // Validate YYYY-MM-DD
+      const dateRegex =
+        /^\d{4}-\d{2}-\d{2}$/;
+
+      if (!dateRegex.test(date)) {
+        Alert.alert(
+          'Validation Error',
+          'Date must be in YYYY-MM-DD format.',
+        );
+        return;
+      }
+
+      // Amount validation
       const amount = Number(
         purchase.amount,
       );
 
       if (
         purchase.amount === '' ||
-        isNaN(amount) ||
+        Number.isNaN(amount) ||
         amount < 0
       ) {
         Alert.alert(
           'Validation Error',
-          'Amount must be a valid number.',
+          'Amount must be a valid non-negative number.',
         );
         return;
       }
 
       const payload = {
-        vendorID,
+        vendorID: vendorID,
         date: `${date}T00:00:00`,
-        amount,
+        amount: amount,
       };
 
       console.log(
@@ -197,35 +193,10 @@ const PurchaseScreen = ({navigation}) => {
         payload,
       );
 
-      const response = await fetch(
-        `${API_URL}/AddPurchaseOrder`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
+      await apiPost(
+        '/Purchase/AddPurchaseOrder',
+        payload,
       );
-
-      const responseText = await response.text();
-
-      console.log(
-        'ADD PURCHASE STATUS:',
-        response.status,
-      );
-
-      console.log(
-        'ADD PURCHASE RESPONSE:',
-        responseText,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${responseText}`,
-        );
-      }
 
       Alert.alert(
         'Success',
@@ -245,6 +216,24 @@ const PurchaseScreen = ({navigation}) => {
         error,
       );
 
+      if (error?.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () =>
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Login'}],
+                }),
+            },
+          ],
+        );
+        return;
+      }
+
       Alert.alert(
         'Error',
         error?.message ||
@@ -253,7 +242,9 @@ const PurchaseScreen = ({navigation}) => {
     }
   };
 
+  // -----------------------------------------
   // Format date
+  // -----------------------------------------
   const formatDate = value => {
     if (!value) {
       return '';
@@ -261,14 +252,16 @@ const PurchaseScreen = ({navigation}) => {
 
     const date = new Date(value);
 
-    if (isNaN(date.getTime())) {
-      return value;
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
     }
 
     return date.toLocaleDateString();
   };
 
+  // -----------------------------------------
   // Render purchase order
+  // -----------------------------------------
   const renderItem = ({item}) => (
     <View style={styles.row}>
       <Text style={styles.cell}>
@@ -284,7 +277,7 @@ const PurchaseScreen = ({navigation}) => {
       </Text>
 
       <Text style={styles.cell}>
-        ₹{Number(item.amount).toFixed(2)}
+        ₹{Number(item.amount || 0).toFixed(2)}
       </Text>
 
       <View style={styles.actionCell}>
