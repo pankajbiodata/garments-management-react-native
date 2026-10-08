@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -6,177 +6,409 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 
-const API_URL =
-  'https://1dde-49-205-47-35.ngrok-free.app/api/Employee';
+import {apiGet} from '../services/api';
 
 const EmployeeAttendanceReport = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadEmployees();
-  }, []);
-
+  // GET employees using authenticated API service
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/`);
+      setLoading(true);
 
-      if (!response.ok) {
-        throw new Error('Failed to load employee data');
+      console.log('Loading employee attendance report...');
+
+      // IMPORTANT:
+      // apiGet automatically handles authentication/token
+      const data = await apiGet('/Employee');
+
+      console.log('Employee API response:', data);
+
+      if (Array.isArray(data)) {
+        setEmployees(data);
+      } else {
+        setEmployees([]);
       }
-
-      const data = await response.json();
-
-      setEmployees(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Unable to load employee attendance report.');
+      console.error('Employee attendance report error:', error);
+
+      if (error.message === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Unable to load employee attendance report.',
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.row}>
-      <Text style={[styles.cell, styles.idCell]}>
-        {item.employeeID}
-      </Text>
+  useEffect(() => {
+    loadEmployees();
+  }, []);
 
-      <Text style={[styles.cell, styles.nameCell]}>
-        {item.name}
-      </Text>
-
-      <Text style={styles.cell}>
-        {item.contact}
-      </Text>
-
-      <Text style={styles.cell}>
-        {item.attendance}
-      </Text>
-
-      <Text style={styles.cell}>
-        {item.payments}
-      </Text>
-    </View>
-  );
-
-  if (loading) {
+  const renderItem = ({item, index}) => {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" />
-        <Text>Loading report...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView horizontal>
-      <View style={styles.container}>
-
-        <Text style={styles.title}>
-          Employee Attendance Report
+      <View style={styles.row}>
+        {/* S.No */}
+        <Text style={[styles.cell, styles.snoCell]}>
+          {index + 1}
         </Text>
 
-        <View style={styles.header}>
+        {/* Employee ID */}
+        <Text style={[styles.cell, styles.idCell]}>
+          {item.employeeID ?? '-'}
+        </Text>
+
+        {/* Name */}
+        <Text style={[styles.cell, styles.nameCell]}>
+          {item.name ?? '-'}
+        </Text>
+
+        {/* Contact */}
+        <Text style={[styles.cell, styles.contactCell]}>
+          {item.contact ?? '-'}
+        </Text>
+
+        {/* Attendance */}
+        <Text style={[styles.cell, styles.numberCell]}>
+          {item.attendance ?? 0}
+        </Text>
+
+        {/* Payments */}
+        <Text style={[styles.cell, styles.numberCell]}>
+          {item.payments ?? 0}
+        </Text>
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+
+      {/* HEADER */}
+      <View style={styles.topSection}>
+        <View>
+          <Text style={styles.title}>
+            Employee Attendance
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Attendance and payment report
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={loadEmployees}
+          disabled={loading}>
+          <Text style={styles.refreshText}>
+            Refresh
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* SUMMARY */}
+      {!loading && (
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>
+              {employees.length}
+            </Text>
+
+            <Text style={styles.summaryLabel}>
+              Employees
+            </Text>
+          </View>
+
+          <View style={styles.summaryDivider} />
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>
+              {employees.reduce(
+                (total, employee) =>
+                  total + Number(employee.attendance || 0),
+                0,
+              )}
+            </Text>
+
+            <Text style={styles.summaryLabel}>
+              Attendance
+            </Text>
+          </View>
+
+          <View style={styles.summaryDivider} />
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>
+              {employees.reduce(
+                (total, employee) =>
+                  total + Number(employee.payments || 0),
+                0,
+              )}
+            </Text>
+
+            <Text style={styles.summaryLabel}>
+              Payments
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* TABLE */}
+      <View style={styles.tableContainer}>
+
+        {/* TABLE HEADER */}
+        <View style={styles.headerRow}>
+
+          <Text style={[styles.headerCell, styles.snoCell]}>
+            #
+          </Text>
+
           <Text style={[styles.headerCell, styles.idCell]}>
             ID
           </Text>
 
           <Text style={[styles.headerCell, styles.nameCell]}>
-            Name
+            Employee Name
           </Text>
 
-          <Text style={styles.headerCell}>
+          <Text style={[styles.headerCell, styles.contactCell]}>
             Contact
           </Text>
 
-          <Text style={styles.headerCell}>
+          <Text style={[styles.headerCell, styles.numberCell]}>
             Attendance
           </Text>
 
-          <Text style={styles.headerCell}>
+          <Text style={[styles.headerCell, styles.numberCell]}>
             Payments
           </Text>
+
         </View>
 
-        <FlatList
-          data={employees}
-          keyExtractor={(item) =>
-            String(item.employeeID)
-          }
-          renderItem={renderItem}
-          ListEmptyComponent={
-            <Text style={styles.empty}>
-              No employees found.
+        {/* LOADING */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="large"
+              color="#2563eb"
+            />
+
+            <Text style={styles.loadingText}>
+              Loading employee report...
             </Text>
-          }
-        />
+          </View>
+        ) : (
+          <FlatList
+            data={employees}
+            keyExtractor={(item, index) =>
+              String(item.employeeID ?? index)
+            }
+            renderItem={renderItem}
+            refreshing={loading}
+            onRefresh={loadEmployees}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>
+                  👥
+                </Text>
+
+                <Text style={styles.emptyTitle}>
+                  No Employees Found
+                </Text>
+
+                <Text style={styles.emptyText}>
+                  There are no employees available for the report.
+                </Text>
+              </View>
+            }
+          />
+        )}
 
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 15,
-    minWidth: 700,
-    backgroundColor: '#f5f5f5',
     flex: 1,
+    backgroundColor: '#f5f7fb',
+    padding: 20,
+  },
+
+  topSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
   },
 
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#172033',
   },
 
-  header: {
+  subtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+
+  refreshButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+
+  refreshText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+
+  summaryCard: {
     flexDirection: 'row',
-    backgroundColor: '#ddd',
-    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 18,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    elevation: 2,
+  },
+
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  summaryValue: {
+    fontSize: 23,
+    fontWeight: '800',
+    color: '#2563eb',
+  },
+
+  summaryLabel: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#6b7280',
+  },
+
+  summaryDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+  },
+
+  tableContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    minHeight: 52,
+    alignItems: 'center',
+    backgroundColor: '#172033',
+    borderBottomWidth: 1,
+    borderBottomColor: '#111827',
   },
 
   row: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    minHeight: 58,
+    alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingVertical: 12,
+    borderBottomColor: '#eef0f4',
+    backgroundColor: '#ffffff',
   },
 
   headerCell: {
-    width: 130,
-    fontWeight: 'bold',
     paddingHorizontal: 8,
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   cell: {
-    width: 130,
     paddingHorizontal: 8,
+    color: '#374151',
+    fontSize: 14,
+  },
+
+  snoCell: {
+    width: 45,
+    textAlign: 'center',
   },
 
   idCell: {
     width: 70,
+    textAlign: 'center',
   },
 
   nameCell: {
     width: 180,
   },
 
-  empty: {
-    padding: 20,
+  contactCell: {
+    width: 150,
+  },
+
+  numberCell: {
+    width: 110,
     textAlign: 'center',
   },
 
-  loading: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
+    padding: 40,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    color: '#6b7280',
+    fontSize: 15,
+  },
+
+  emptyContainer: {
+    padding: 50,
+    alignItems: 'center',
+  },
+
+  emptyIcon: {
+    fontSize: 45,
+    marginBottom: 12,
+  },
+
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#374151',
+  },
+
+  emptyText: {
+    marginTop: 6,
+    textAlign: 'center',
+    color: '#6b7280',
+    fontSize: 14,
   },
 });
 
