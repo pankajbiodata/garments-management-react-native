@@ -6,7 +6,7 @@ const EmployeeList = ({ route, navigation }) => {
 
   const handleUpdateEmployee = async (id) => {
     try {
-      const response = await fetch(`https://3b36-49-205-47-35.ngrok-free.app/api/Employee/${id}`, {
+      const response = await fetch(`https://1dde-49-205-47-35.ngrok-free.app/api/Employee/${id}`, {
         method: 'GET',
       });
 

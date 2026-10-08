@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Inventory';
+  'https://1dde-49-205-47-35.ngrok-free.app/api/Inventory';
 
 const InventoryReport = () => {
   const [items, setItems] = useState([]);

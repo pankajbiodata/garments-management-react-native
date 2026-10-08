@@ -13,7 +13,7 @@ const AddEmployeeScreen = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('https://3b36-49-205-47-35.ngrok-free.app/api/employee');
+        const response = await axios.get('https://1dde-49-205-47-35.ngrok-free.app/api/employee');
         const data = response.data;
         setEmployees(data);
       } catch (error) {
@@ -27,7 +27,7 @@ const AddEmployeeScreen = () => {
 
   const handleAddEmployee = async () => {
     try {
-      const response = await axios.post('https://3b36-49-205-47-35.ngrok-free.app/api/employee', {
+      const response = await axios.post('https://1dde-49-205-47-35.ngrok-free.app/api/employee', {
         Name: employeeName,
         Contact: contact,
       });

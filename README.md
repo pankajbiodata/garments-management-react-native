@@ -293,7 +293,7 @@ The current repository configuration uses:
 
 ```javascript
 const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api';
+  'https://1dde-49-205-47-35.ngrok-free.app/api';
 ```
 
 The current `api.js` retrieves the JWT from AsyncStorage and adds:

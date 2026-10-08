@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Employee';
+  'https://1dde-49-205-47-35.ngrok-free.app/api/Employee';
 
 const EmployeeAttendanceReport = () => {
   const [employees, setEmployees] = useState([]);

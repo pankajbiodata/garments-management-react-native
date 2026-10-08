@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 
 const PURCHASE_API =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Purchase';
+  'https://1dde-49-205-47-35.ngrok-free.app/api/Purchase';
 
 const VENDOR_API =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Vendor';
+  'https://1dde-49-205-47-35.ngrok-free.app/api/Vendor';
 
 const PurchaseReport = () => {
   const [purchases, setPurchases] = useState([]);

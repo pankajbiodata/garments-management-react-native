@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL =
-  'https://3b36-49-205-47-35.ngrok-free.app/api';
+  'https://1dde-49-205-47-35.ngrok-free.app/api';
 
 const apiRequest = async (endpoint, options = {}) => {
   try {

@@ -47,7 +47,7 @@ import EditVendor from './screens/EditVendor';
 import EditInventory from './screens/EditInventory';
 import EditSales from './screens/EditSales';
 import EditPurchase from './screens/EditPurchase';
-
+import EditWorkAssignment from './screens/EditWorkAssignment';
 // Reports
 import ReportsScreen from './screens/ReportsScreen';
 import EmployeeAttendanceReport from './reports/EmployeeAttendanceReport';
@@ -57,7 +57,7 @@ import PurchaseReport from './reports/PurchaseReport';
 import SetupScreen from './screens/SetupScreen';
 // Admin
 import UserManagementScreen from './screens/UserManagementScreen';
-
+import WorkAssignmentScreen from './screens/WorkAssignmentScreen';
 const Stack = createNativeStackNavigator();
 
 const {width} = Dimensions.get('window');
@@ -75,6 +75,7 @@ const permissions = {
     'Purchase Management',
     'Customer Management',
     'Vendor Management',
+     'Work Assignment Management',
     'Reports',
     'User Management',
     'Settings',
@@ -85,6 +86,7 @@ const permissions = {
     'Sales Management',
     'Purchase Management',
     'Customer Management',
+    'Work Assignment Management',
     'Vendor Management',
     'Reports',
   ],
@@ -93,6 +95,7 @@ const permissions = {
     'Inventory Management',
     'Sales Management',
     'Customer Management',
+    'Work Assignment Management',
     'Reports',
   ],
 
@@ -191,6 +194,14 @@ const data = [
     icon: 'account-cog',
     color: '#7C3AED',
     route: 'UserManagement',
+  },
+    {
+    id: '10',
+    title: 'Work Assignment Management',
+    subtitle: 'Assign & track worker tasks',
+    icon: 'clipboard-account',
+    color: '#0EA5E9',
+    route: 'WorkAssignmentScreen',
   },
 ];
 
@@ -675,7 +686,15 @@ const AppNavigator = () => {
                   'Edit Employee',
               }}
             />
+{/* WORK ASSIGNMENT */}
 
+<Stack.Screen
+  name="WorkAssignmentScreen"
+  component={WorkAssignmentScreen}
+  options={{
+    title: 'Work Assignment Management',
+  }}
+/>
 
             {/* CUSTOMER */}
 

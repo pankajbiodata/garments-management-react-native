@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 
 const SALES_API =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/sales';
+  'https://1dde-49-205-47-35.ngrok-free.app/api/sales';
 
 const CUSTOMER_API =
-  'https://3b36-49-205-47-35.ngrok-free.app/api/Customer';
+  'https://1dde-49-205-47-35.ngrok-free.app/api/Customer';
 
 const SalesReport = () => {
   const [sales, setSales] = useState([]);
